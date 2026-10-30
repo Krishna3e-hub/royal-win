@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Royal Win - Official Gaming Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #070a12;
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+        .royal-card {
+            background: linear-gradient(145deg, rgba(22, 30, 49, 0.92), rgba(13, 18, 31, 0.96));
+            border: 1px solid rgba(245, 158, 11, 0.16);
+        }
+        .gold-gradient {
+            background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #d97706 100%);
+        }
+        .lock-screen {
+            background: rgba(7, 10, 18, 0.88);
+            backdrop-filter: blur(6px);
+        }
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+        .animate-countdown {
+            animation: pulse-fast 0.8s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24">
+
+    <!-- TOP HEADER -->
+    <header class="sticky top-0 z-40 bg-[#0b101e]/95 backdrop-blur-md border-b border-amber-500/20 px-4 py-3">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-9 h-9 rounded-xl gold-gradient flex items-center justify-center shadow-lg shadow-amber-500/20">
+                    <span class="text-xl">👑</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-wide bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                        ROYAL WIN
+                    </h1>
+                    <p id="userBadge" class="text-[10px] text-slate-400 font-mono">ID: Loading...</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <div class="bg-slate-900/90 border border-amber-500/40 rounded-xl px-3 py-1.5 text-right">
+                    <span class="text-[10px] text-slate-400 block leading-none">WALLET CHIPS</span>
+                    <span id="walletBalance" class="text-sm font-extrabold text-amber-400">₹0.00</span>
+                </div>
+                <button onclick="openModal('depositModal')" class="gold-gradient text-slate-950 font-extrabold px-3.5 py-2 rounded-xl text-xs shadow-lg shadow-amber-500/20 active:scale-95 transition">
+                    + Deposit
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN MOBILE CONTAINER -->
+    <main class="max-w-md mx-auto px-3 pt-4 space-y-4">
+
+        <!-- ANNOUNCEMENT BAR -->
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center space-x-2 text-xs text-amber-300">
+            <span>📢</span>
+            <marquee class="font-semibold">
+                Welcome to Royal Win! Instant UPI Deposit via Scanner & 24/7 Telegram Support Available. Play Wingo 30s, Chicken Road & Royal Dice!
+            </marquee>
+        </div>
+
+        <!-- QUICK WALLET & SUPPORT BAR -->
+        <div class="grid grid-cols-3 gap-2">
+            <button onclick="openModal('depositModal')" class="royal-card p-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs font-bold text-emerald-400 hover:border-emerald-500/50 transition">
+                <span>⚡</span><span>Deposit</span>
+            </button>
+            <button onclick="openModal('withdrawModal')" class="royal-card p-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs font-bold text-sky-400 hover:border-sky-500/50 transition">
+                <span>🏧</span><span>Withdraw</span>
+            </button>
+            <button onclick="openModal('supportModal')" class="royal-card p-2.5 rounded-xl flex items-center justify-center space-x-1.5 text-xs font-bold text-amber-400 hover:border-amber-500/50 transition">
+                <span>💬</span><span>Support</span>
+            </button>
+        </div>
+
+        <!-- GAME NAVIGATION TABS -->
+        <div class="grid grid-cols-3 gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            <button id="tabBtn_wingo" onclick="switchTab('wingo')" class="py-2.5 rounded-xl font-extrabold text-xs gold-gradient text-slate-950 shadow">
+                🎨 Wingo 30s
+            </button>
+            <button id="tabBtn_chicken" onclick="switchTab('chicken')" class="py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-white">
+                🐔 Chicken Road
+            </button>
+            <button id="tabBtn_dice" onclick="switchTab('dice')" class="py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-white">
+                🎲 Royal Dice
+            </button>
+        </div>
+
+        <!-- ==================== TAB 1: WINGO 30s ==================== -->
+        <section id="tab_wingo" class="space-y-4">
+            <!-- Live Period & Countdown Banner -->
+            <div class="bg-gradient-to-br from-amber-600/25 via-slate-900 to-indigo-950 p-4 rounded-2xl border border-amber-500/40 flex justify-between items-center shadow-xl">
+                <div>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Wingo 30 Seconds</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Period ID</p>
+                    <p id="wingoPeriod" class="text-lg font-black text-white font-mono tracking-tight">202610300001</p>
+                </div>
+
+                <div class="text-right">
+                    <p class="text-[11px] text-amber-300 font-bold uppercase tracking-wider">Time Remaining</p>
+                    <div id="wingoTimer" class="text-3xl font-black text-amber-400 font-mono mt-1 bg-slate-950/80 px-3 py-1 rounded-xl border border-amber-500/30">
+                        00:30
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wingo Betting Console (Total Bets Hidden from Players) -->
+            <div class="royal-card p-4 rounded-2xl relative overflow-hidden space-y-4">
+                <!-- 5-Second Lock Overlay -->
+                <div id="wingoLockOverlay" class="hidden lock-screen absolute inset-0 z-30 flex flex-col items-center justify-center p-4 text-center">
+                    <div class="w-14 h-14 rounded-full bg-amber-500/20 border border-amber-500 flex items-center justify-center text-3xl mb-2 animate-countdown">
+                        🔒
+                    </div>
+                    <h3 class="text-lg font-black text-amber-400 tracking-wide">BETTING CLOSED</h3>
+                    <p class="text-xs text-slate-300 mt-0.5">Calculating round result...</p>
+                </div>
+
+                <!-- Color Selection -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-300">1. SELECT COLOR</span>
+                        <span class="text-[11px] text-slate-400">Win up to 4.5x</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button onclick="openWingoBetConfirm('GREEN')" class="bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-400 hover:to-emerald-600 py-3 rounded-xl font-extrabold text-sm shadow-lg shadow-emerald-950 active:scale-95 transition">
+                            Green
+                            <span class="block text-[10px] font-normal opacity-90">2x</span>
+                        </button>
+                        <button onclick="openWingoBetConfirm('VIOLET')" class="bg-gradient-to-b from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 py-3 rounded-xl font-extrabold text-sm shadow-lg shadow-purple-950 active:scale-95 transition">
+                            Violet
+                            <span class="block text-[10px] font-normal opacity-90">4.5x</span>
+                        </button>
+                        <button onclick="openWingoBetConfirm('RED')" class="bg-gradient-to-b from-rose-500 to-rose-700 hover:from-rose-400 hover:to-rose-600 py-3 rounded-xl font-extrabold text-sm shadow-lg shadow-rose-950 active:scale-95 transition">
+                            Red
+                            <span class="block text-[10px] font-normal opacity-90">2x</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Number Balls 0 - 9 -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-300">2. SELECT NUMBER</span>
+                        <span class="text-[11px] text-amber-400 font-bold">9x Payout</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                        <button onclick="openWingoBetConfirm('0')" class="bg-gradient-to-br from-rose-600 to-purple-600 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">0</button>
+                        <button onclick="openWingoBetConfirm('1')" class="bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">1</button>
+                        <button onclick="openWingoBetConfirm('2')" class="bg-rose-600 hover:bg-rose-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">2</button>
+                        <button onclick="openWingoBetConfirm('3')" class="bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">3</button>
+                        <button onclick="openWingoBetConfirm('4')" class="bg-rose-600 hover:bg-rose-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">4</button>
+                        <button onclick="openWingoBetConfirm('5')" class="bg-gradient-to-br from-emerald-600 to-purple-600 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">5</button>
+                        <button onclick="openWingoBetConfirm('6')" class="bg-rose-600 hover:bg-rose-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">6</button>
+                        <button onclick="openWingoBetConfirm('7')" class="bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">7</button>
+                        <button onclick="openWingoBetConfirm('8')" class="bg-rose-600 hover:bg-rose-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">8</button>
+                        <button onclick="openWingoBetConfirm('9')" class="bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-xl font-black text-base shadow active:scale-90 transition">9</button>
+                    </div>
+                </div>
+
+                <!-- Big / Small Bar -->
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <button onclick="openWingoBetConfirm('BIG')" class="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black py-3 rounded-xl text-sm shadow-lg active:scale-95 transition">
+                        BIG (5-9) <span class="text-xs font-bold opacity-80 ml-1">2x</span>
+                    </button>
+                    <button onclick="openWingoBetConfirm('SMALL')" class="bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black py-3 rounded-xl text-sm shadow-lg active:scale-95 transition">
+                        SMALL (0-4) <span class="text-xs font-bold opacity-80 ml-1">2x</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Wingo Sub-Tabs: Game History vs My Bets -->
+            <div class="royal-card p-4 rounded-2xl">
+                <div class="flex space-x-2 mb-3 border-b border-slate-800 pb-2">
+                    <button id="subTabHistory" onclick="toggleWingoHistoryTab('PUBLIC')" class="text-xs font-extrabold text-amber-400 border-b-2 border-amber-400 pb-1">
+                        📊 Game History
+                    </button>
+                    <button id="subTabMyBets" onclick="toggleWingoHistoryTab('MY')" class="text-xs font-bold text-slate-400 pb-1">
+                        🎯 My Bets
+                    </button>
+                </div>
+
+                <!-- Public Results Table -->
+                <div id="publicHistoryContainer" class="overflow-hidden rounded-xl border border-slate-800/90">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/90 text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-2.5">Period</th>
+                                <th class="p-2.5 text-center">Number</th>
+                                <th class="p-2.5 text-center">Big/Small</th>
+                                <th class="p-2.5 text-right">Color</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wingoHistoryBody" class="divide-y divide-slate-800/60">
+                            <tr><td colspan="4" class="p-4 text-center text-slate-500">Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Personal Bets Table -->
+                <div id="myBetsContainer" class="hidden overflow-hidden rounded-xl border border-slate-800/90">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/90 text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-2.5">Game/Period</th>
+                                <th class="p-2.5 text-center">Pick</th>
+                                <th class="p-2.5 text-center">Bet</th>
+                                <th class="p-2.5 text-right">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="myBetsBody" class="divide-y divide-slate-800/60">
+                            <tr><td colspan="4" class="p-4 text-center text-slate-500">No bets placed yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: CHICKEN ROAD ==================== -->
+        <section id="tab_chicken" class="hidden space-y-4">
+            <div class="royal-card p-4 rounded-2xl space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">INSTANT MULTIPLIER</span>
+                        <h2 class="text-lg font-extrabold text-white mt-1">🐔 Chicken Road Crossing</h2>
+                        <p class="text-xs text-slate-400">Cross safely & cashout anytime before hitting fire!</p>
+                    </div>
+                    <div class="text-right bg-slate-950 px-3 py-2 rounded-xl border border-emerald-500/30">
+                        <span class="text-[10px] text-slate-400 block">MULTIPLIER</span>
+                        <span id="chickenMultiplierDisplay" class="text-xl font-black text-emerald-400">1.00x</span>
+                    </div>
+                </div>
+
+                <!-- Difficulty Mode Selector -->
+                <div class="grid grid-cols-3 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                    <button onclick="setChickenDifficulty('EASY')" id="diff_EASY" class="py-1.5 rounded-lg text-xs font-bold text-slate-400">Easy</button>
+                    <button onclick="setChickenDifficulty('MEDIUM')" id="diff_MEDIUM" class="py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950">Medium</button>
+                    <button onclick="setChickenDifficulty('HARD')" id="diff_HARD" class="py-1.5 rounded-lg text-xs font-bold text-slate-400">Hard (40x)</button>
+                </div>
+
+                <!-- 7-Lane Road Visual -->
+                <div id="chickenRoadLanes" class="grid grid-cols-7 gap-1.5 py-2"></div>
+
+                <!-- Bet Input & Action Buttons -->
+                <div class="space-y-3 pt-2 border-t border-slate-800">
+                    <div>
+                        <label class="text-xs text-slate-400 font-bold">Bet Amount (₹)</label>
+                        <div class="flex space-x-2 mt-1">
+                            <input id="chickenBetInput" type="number" value="50" min="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 font-extrabold text-white text-sm" />
+                            <button onclick="document.getElementById('chickenBetInput').value=100" class="bg-slate-800 px-3 rounded-xl text-xs font-bold">₹100</button>
+                            <button onclick="document.getElementById('chickenBetInput').value=500" class="bg-slate-800 px-3 rounded-xl text-xs font-bold">₹500</button>
+                        </div>
+                    </div>
+
+                    <button id="btnChickenStart" onclick="startChickenGame()" class="w-full gold-gradient text-slate-950 font-black py-3.5 rounded-xl text-sm shadow-lg">
+                        🐔 START CROSSING
+                    </button>
+
+                    <div id="chickenActiveControls" class="hidden grid grid-cols-2 gap-2.5">
+                        <button onclick="stepChickenGame()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-3.5 rounded-xl text-sm shadow-lg">
+                            👣 NEXT LANE
+                        </button>
+                        <button onclick="cashoutChickenGame()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 rounded-xl text-sm shadow-lg">
+                            💰 CASHOUT <span id="cashoutAmtText"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: ROYAL DICE ==================== -->
+        <section id="tab_dice" class="hidden space-y-4">
+            <div class="royal-card p-5 rounded-2xl text-center space-y-4">
+                <h2 class="text-lg font-extrabold text-amber-400">🎲 Royal Instant Dice</h2>
+                <p class="text-xs text-slate-400">Pick Low (1-3), High (4-6), or Lucky 6 Jackpot!</p>
+
+                <div class="w-24 h-24 mx-auto rounded-3xl bg-slate-950 border-2 border-amber-500/40 flex items-center justify-center text-5xl shadow-inner" id="diceBox">
+                    🎲
+                </div>
+
+                <div class="flex justify-center space-x-2">
+                    <input id="diceBetAmount" type="number" value="50" min="10" class="w-36 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center font-extrabold text-sm" />
+                </div>
+
+                <div class="grid grid-cols-3 gap-2.5 pt-2">
+                    <button onclick="playDice('LOW')" class="bg-sky-600 hover:bg-sky-500 py-3 rounded-xl font-extrabold text-xs">
+                        LOW (1-3)
+                        <span class="block text-[10px] opacity-80">1.95x</span>
+                    </button>
+                    <button onclick="playDice('JACKPOT_6')" class="gold-gradient text-slate-950 py-3 rounded-xl font-black text-xs">
+                        EXACT 6
+                        <span class="block text-[10px] opacity-80">5.0x</span>
+                    </button>
+                    <button onclick="playDice('HIGH')" class="bg-rose-600 hover:bg-rose-500 py-3 rounded-xl font-extrabold text-xs">
+                        HIGH (4-6)
+                        <span class="block text-[10px] opacity-80">1.95x</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FLOATING TELEGRAM SUPPORT BUTTON -->
+    <button onclick="openModal('supportModal')" class="fixed bottom-20 right-4 z-40 bg-sky-500 hover:bg-sky-400 text-white p-3.5 rounded-full shadow-2xl border-2 border-white/20 flex items-center space-x-1.5">
+        <span class="text-xl">✈️</span>
+        <span class="text-xs font-extrabold pr-1">Help</span>
+    </button>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 inset-x-0 z-40 bg-[#0b101e]/95 backdrop-blur-md border-t border-slate-800/80 py-2 px-4">
+        <div class="max-w-md mx-auto grid grid-cols-4 gap-2 text-center">
+            <button onclick="switchTab('wingo')" class="flex flex-col items-center text-amber-400">
+                <span class="text-lg">🎮</span>
+                <span class="text-[10px] font-bold">Games</span>
+            </button>
+            <button onclick="openModal('depositModal')" class="flex flex-col items-center text-slate-300 hover:text-amber-400">
+                <span class="text-lg">💳</span>
+                <span class="text-[10px] font-bold">Deposit</span>
+            </button>
+            <button onclick="openModal('txModal')" class="flex flex-col items-center text-slate-300 hover:text-amber-400">
+                <span class="text-lg">📜</span>
+                <span class="text-[10px] font-bold">Records</span>
+            </button>
+            <button onclick="openModal('supportModal')" class="flex flex-col items-center text-slate-300 hover:text-amber-400">
+                <span class="text-lg">🎧</span>
+                <span class="text-[10px] font-bold">Support</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ==================== MODAL 1: WINGO BET SLIP ==================== -->
+    <div id="wingoBetModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="royal-card w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 border-t border-amber-500/40 space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold">Wingo 30s Bet Slip</span>
+                    <h3 id="betSlipTitle" class="text-lg font-black text-amber-400">Selection: GREEN</h3>
+                </div>
+                <button onclick="closeModal('wingoBetModal')" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+
+            <div>
+                <label class="text-xs text-slate-400 font-bold">Quick Chip Selection</label>
+                <div class="grid grid-cols-4 gap-2 mt-1.5">
+                    <button onclick="setBetSlipAmount(10)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-2 rounded-xl font-bold text-xs">₹10</button>
+                    <button onclick="setBetSlipAmount(50)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-2 rounded-xl font-bold text-xs">₹50</button>
+                    <button onclick="setBetSlipAmount(100)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-2 rounded-xl font-bold text-xs">₹100</button>
+                    <button onclick="setBetSlipAmount(500)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-2 rounded-xl font-bold text-xs">₹500</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-xs text-slate-400 font-bold">Enter Custom Amount (₹)</label>
+                <input id="wingoBetAmountInput" type="number" value="20" min="10" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 font-extrabold text-white text-base" />
+            </div>
+
+            <button onclick="confirmWingoBet()" class="w-full gold-gradient text-slate-950 font-black py-3.5 rounded-xl text-sm shadow-lg">
+                CONFIRM BET
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: DEPOSIT (SCANNER + UPI ID) ==================== -->
+    <div id="depositModal" class="hidden fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="royal-card max-w-sm w-full rounded-2xl p-5 border border-amber-500/30 space-y-4 my-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl">⚡</span>
+                    <h3 class="font-extrabold text-base text-amber-400">Add Chips (UPI Scanner)</h3>
+                </div>
+                <button onclick="closeModal('depositModal')" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <!-- Step 1: Select Amount -->
+            <div>
+                <label class="text-xs text-slate-300 font-bold">1. Select Deposit Amount (₹)</label>
+                <div class="grid grid-cols-4 gap-2 my-2">
+                    <button onclick="setDepositAmount(100)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-1.5 rounded-lg text-xs font-bold transition">₹100</button>
+                    <button onclick="setDepositAmount(300)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-1.5 rounded-lg text-xs font-bold transition">₹300</button>
+                    <button onclick="setDepositAmount(500)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-1.5 rounded-lg text-xs font-bold transition">₹500</button>
+                    <button onclick="setDepositAmount(1000)" class="bg-slate-800 hover:bg-amber-500 hover:text-slate-950 py-1.5 rounded-lg text-xs font-bold transition">₹1000</button>
+                </div>
+                <input id="depositAmountInput" type="number" value="500" min="100" oninput="refreshUpiScanner()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 font-extrabold text-amber-400 text-sm" />
+            </div>
+
+            <!-- Step 2: Scanner & UPI ID -->
+            <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-center space-y-2.5">
+                <p class="text-[11px] text-slate-300 font-semibold">2. Scan QR with PhonePe / GPay / Paytm</p>
+                <div class="bg-white p-2.5 rounded-2xl inline-block shadow-lg">
+                    <img id="upiQrImg" src="" alt="Royal Win UPI Scanner" class="w-40 h-40 mx-auto" />
+                </div>
+
+                <div class="pt-1">
+                    <p class="text-[10px] text-slate-400 mb-1">Or Copy Merchant UPI ID:</p>
+                    <div class="flex items-center justify-between bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl">
+                        <span id="upiIdText" class="text-xs font-mono text-amber-400 truncate">risabhkumarkushwaha@okhdfcbank</span>
+                        <button onclick="copyMerchantUpi()" class="bg-amber-500 text-slate-950 px-2.5 py-1 rounded-lg text-[11px] font-extrabold ml-2 shrink-0">
+                            COPY
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: UTR Input -->
+            <div>
+                <label class="text-xs text-slate-300 font-bold">3. Enter 12-Digit UTR / Reference No.</label>
+                <input id="depositUtrInput" type="text" maxlength="12" placeholder="Enter 12-digit UTR after payment" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white font-mono" />
+                <p class="text-[10px] text-slate-400 mt-1">Chips will be added automatically as soon as Admin approves on Telegram.</p>
+            </div>
+
+            <button onclick="submitDepositRequest()" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black py-3 rounded-xl text-sm shadow-lg">
+                ✅ SUBMIT PAYMENT REQUEST
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 3: WITHDRAWAL ==================== -->
+    <div id="withdrawModal" class="hidden fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
+        <div class="royal-card max-w-sm w-full rounded-2xl p-5 border border-sky-500/30 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                <h3 class="font-extrabold text-base text-sky-400">🏧 Withdraw Winnings</h3>
+                <button onclick="closeModal('withdrawModal')" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+
+            <div>
+                <label class="text-xs text-slate-300 font-bold">Withdrawal Amount (Min ₹200)</label>
+                <input id="withdrawAmountInput" type="number" value="200" min="200" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold text-white" />
+            </div>
+
+            <div>
+                <label class="text-xs text-slate-300 font-bold">Your Receiving UPI ID</label>
+                <input id="withdrawUpiInput" type="text" placeholder="yourname@okhdfcbank" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono text-white" />
+            </div>
+
+            <button onclick="submitWithdrawRequest()" class="w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black py-3 rounded-xl text-sm shadow-lg">
+                REQUEST WITHDRAWAL
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: TELEGRAM SUPPORT LINKS ==================== -->
+    <div id="supportModal" class="hidden fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
+        <div class="royal-card max-w-sm w-full rounded-2xl p-5 border border-amber-500/30 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                <h3 class="font-extrabold text-base text-amber-400">🎧 Royal Win 24/7 Support</h3>
+                <button onclick="closeModal('supportModal')" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+
+            <p class="text-xs text-slate-300 leading-relaxed">
+                For instant deposit approval, agent partnership, VIP bonuses, or withdrawal queries, contact our official Telegram team below:
+            </p>
+
+            <div class="space-y-3">
+                <a id="agentSupportLink" href="https://t.me/Joce1991" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 p-3.5 rounded-xl hover:border-amber-400 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">👔</span>
+                        <div>
+                            <p class="text-sm font-extrabold text-amber-300">Official Agent Contact</p>
+                            <p class="text-[11px] text-slate-400">@Joce1991 (Telegram)</p>
+                        </div>
+                    </div>
+                    <span class="bg-amber-500 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-lg">Chat</span>
+                </a>
+
+                <a id="csSupportLink" href="https://t.me/AlianaMentor" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between bg-gradient-to-r from-sky-500/20 to-indigo-500/20 border border-sky-500/40 p-3.5 rounded-xl hover:border-sky-400 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">👩‍💻</span>
+                        <div>
+                            <p class="text-sm font-extrabold text-sky-300">Customer Service Mentor</p>
+                            <p class="text-[11px] text-slate-400">@AlianaMentor (Telegram)</p>
+                        </div>
+                    </div>
+                    <span class="bg-sky-500 text-white text-xs font-extrabold px-3 py-1 rounded-lg">Chat</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 5: WALLET TRANSACTIONS ==================== -->
+    <div id="txModal" class="hidden fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
+        <div class="royal-card max-w-sm w-full rounded-2xl p-5 border border-slate-700 space-y-3 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 class="font-extrabold text-base text-amber-400">📜 Deposit & Withdraw Records</h3>
+                <button onclick="closeModal('txModal')" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+            <div id="txListContainer" class="space-y-2 overflow-y-auto pr-1 text-xs">
+                <p class="text-slate-500 text-center py-4">No transactions yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST ALERT -->
+    <div id="toastAlert" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 border border-amber-400 text-white px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-extrabold max-w-xs text-center"></div>
+
+    <script>
+        const socket = io();
+        let currentUserId = localStorage.getItem('royal_win_uid');
+        if (!currentUserId) {
+            currentUserId = 'player_' + Math.floor(10000 + Math.random() * 90000);
+            localStorage.setItem('royal_win_uid', currentUserId);
+        }
+
+        let merchantUpiId = 'risabhkumarkushwaha@okhdfcbank';
+        let merchantName = 'Royal Win';
+        let pendingWingoSelection = 'GREEN';
+        let chickenDifficulty = 'MEDIUM';
+        let chickenMultipliers = [1.28, 1.70, 2.35, 3.30, 4.80, 7.20, 11.50];
+
+        async function bootstrap() {
+            document.getElementById('userBadge').innerText = `ID: ${currentUserId}`;
+
+            const cfg = await fetch('/api/config').then(r => r.json());
+            merchantUpiId = cfg.upiId;
+            merchantName = cfg.merchantName;
+            document.getElementById('upiIdText').innerText = merchantUpiId;
+            document.getElementById('agentSupportLink').href = cfg.support.agent;
+            document.getElementById('csSupportLink').href = cfg.support.customerService;
+            refreshUpiScanner();
+
+            const session = await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId })
+            }).then(r => r.json());
+
+            updateWalletUI(session.user.balance);
+            renderTransactions(session.transactions);
+            renderMyBets(session.myBets);
+            renderChickenLanes(-1, []);
+
+            socket.emit('join_user', currentUserId);
+        }
+
+        function notify(msg) {
+            const box = document.getElementById('toastAlert');
+            box.innerText = msg;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 3500);
+        }
+
+        function updateWalletUI(amount) {
+            document.getElementById('walletBalance').innerText = `₹${parseFloat(amount).toFixed(2)}`;
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'depositModal') refreshUpiScanner();
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function switchTab(tab) {
+            ['wingo', 'chicken', 'dice'].forEach(t => {
+                document.getElementById(`tab_${t}`).classList.toggle('hidden', t !== tab);
+                document.getElementById(`tabBtn_${t}`).className = (t === tab)
+                    ? 'py-2.5 rounded-xl font-extrabold text-xs gold-gradient text-slate-950 shadow'
+                    : 'py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-white';
+            });
+        }
+
+        // ================= DEPOSIT & QR SCANNER =================
+        function setDepositAmount(amt) {
+            document.getElementById('depositAmountInput').value = amt;
+            refreshUpiScanner();
+        }
+
+        function refreshUpiScanner() {
+            const amt = document.getElementById('depositAmountInput').value || 100;
+            const upiLink = `upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${amt}&cu=INR`;
+            document.getElementById('upiQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
+        }
+
+        function copyMerchantUpi() {
+            navigator.clipboard.writeText(merchantUpiId);
+            notify('📋 UPI ID Copied: ' + merchantUpiId);
+        }
+
+        async function submitDepositRequest() {
+            const amount = document.getElementById('depositAmountInput').value;
+            const utr = document.getElementById('depositUtrInput').value;
+
+            const res = await fetch('/api/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId, amount, utr })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            document.getElementById('depositUtrInput').value = '';
+            renderTransactions(res.transactions);
+            closeModal('depositModal');
+            notify('✅ Deposit Sent! Admin notified on Telegram.');
+        }
+
+        async function submitWithdrawRequest() {
+            const amount = document.getElementById('withdrawAmountInput').value;
+            const upiId = document.getElementById('withdrawUpiInput').value;
+
+            const res = await fetch('/api/withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId, amount, upiId })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            updateWalletUI(res.balance);
+            renderTransactions(res.transactions);
+            closeModal('withdrawModal');
+            notify('🏧 Withdrawal Request Sent!');
+        }
+
+        function renderTransactions(list) {
+            const container = document.getElementById('txListContainer');
+            if (!list || list.length === 0) return;
+            container.innerHTML = list.map(item => {
+                const badge = item.status === 'APPROVED'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : item.status === 'REJECTED'
+                    ? 'bg-rose-500/20 text-rose-400'
+                    : 'bg-amber-500/20 text-amber-300';
+                return `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-white">${item.txType} - ₹${item.amount}</p>
+                        <p class="text-[10px] text-slate-400 font-mono">${item.utr ? 'UTR: ' + item.utr : 'UPI: ' + item.upiId}</p>
+                        <p class="text-[10px] text-slate-500">${item.timestamp}</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg font-extrabold text-[10px] ${badge}">${item.status}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // ================= WINGO 30s SOCKET & BETS =================
+        function openWingoBetConfirm(selection) {
+            pendingWingoSelection = selection;
+            document.getElementById('betSlipTitle').innerText = `Bet On: ${selection}`;
+            openModal('wingoBetModal');
+        }
+
+        function setBetSlipAmount(val) {
+            document.getElementById('wingoBetAmountInput').value = val;
+        }
+
+        async function confirmWingoBet() {
+            const amount = document.getElementById('wingoBetAmountInput').value;
+            const res = await fetch('/api/wingo/bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId, selection: pendingWingoSelection, amount })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            updateWalletUI(res.balance);
+            renderMyBets(res.myBets);
+            closeModal('wingoBetModal');
+            notify(`🎯 Bet ₹${amount} placed on ${pendingWingoSelection}!`);
+        }
+
+        function toggleWingoHistoryTab(mode) {
+            const isPublic = mode === 'PUBLIC';
+            document.getElementById('publicHistoryContainer').classList.toggle('hidden', !isPublic);
+            document.getElementById('myBetsContainer').classList.toggle('hidden', isPublic);
+            document.getElementById('subTabHistory').className = isPublic
+                ? 'text-xs font-extrabold text-amber-400 border-b-2 border-amber-400 pb-1'
+                : 'text-xs font-bold text-slate-400 pb-1';
+            document.getElementById('subTabMyBets').className = !isPublic
+                ? 'text-xs font-extrabold text-amber-400 border-b-2 border-amber-400 pb-1'
+                : 'text-xs font-bold text-slate-400 pb-1';
+        }
+
+        function renderWingoHistory(history) {
+            if (!history || history.length === 0) return;
+            const tbody = document.getElementById('wingoHistoryBody');
+            tbody.innerHTML = history.map(r => {
+                const isGreen = r.color.includes('GREEN');
+                const hasViolet = r.color.includes('VIOLET');
+                return `<tr>
+                    <td class="p-2.5 font-mono text-slate-300">${r.period}</td>
+                    <td class="p-2.5 text-center font-black text-sm text-white">${r.number}</td>
+                    <td class="p-2.5 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${r.size === 'BIG' ? 'bg-amber-500/20 text-amber-300' : 'bg-sky-500/20 text-sky-300'}">${r.size}</span>
+                    </td>
+                    <td class="p-2.5 text-right space-x-1">
+                        <span class="inline-block w-3 h-3 rounded-full ${isGreen ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                        ${hasViolet ? '<span class="inline-block w-3 h-3 rounded-full bg-purple-500"></span>' : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderMyBets(bets) {
+            if (!bets || bets.length === 0) return;
+            const tbody = document.getElementById('myBetsBody');
+            tbody.innerHTML = bets.map(b => {
+                const statusColor = b.status === 'WON' ? 'text-emerald-400' : b.status === 'LOST' ? 'text-rose-400' : 'text-amber-300';
+                return `<tr>
+                    <td class="p-2.5 font-mono">${b.period}</td>
+                    <td class="p-2.5 text-center font-bold text-amber-300">${b.selection}</td>
+                    <td class="p-2.5 text-center">₹${b.amount}</td>
+                    <td class="p-2.5 text-right font-extrabold ${statusColor}">
+                        ${b.status === 'WON' ? '+₹' + b.winAmount : b.status}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        socket.on('wingo_init', (data) => {
+            document.getElementById('wingoPeriod').innerText = data.period;
+            renderWingoHistory(data.history);
+        });
+
+        socket.on('wingo_tick', (data) => {
+            document.getElementById('wingoPeriod').innerText = data.period;
+            const s = data.timer < 10 ? `0${data.timer}` : data.timer;
+            document.getElementById('wingoTimer').innerText = `00:${s}`;
+            document.getElementById('wingoLockOverlay').classList.toggle('hidden', !data.locked);
+            if (data.locked) closeModal('wingoBetModal');
+        });
+
+        socket.on('wingo_round_end', (data) => {
+            renderWingoHistory(data.history);
+        });
+
+        socket.on('wingo_personal_result', (data) => {
+            updateWalletUI(data.balance);
+            if (data.won) {
+                notify(`🎉 WIN! You won ₹${data.winAmount} on ${data.selection}!`);
+            }
+            // Refresh session bets
+            fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId })
+            }).then(r => r.json()).then(s => renderMyBets(s.myBets));
+        });
+
+        socket.on('wallet_updated', (data) => {
+            updateWalletUI(data.balance);
+            notify(data.message);
+        });
+
+        socket.on('transactions_updated', (list) => {
+            renderTransactions(list);
+        });
+
+        // ================= CHICKEN ROAD LOGIC =================
+        function setChickenDifficulty(diff) {
+            chickenDifficulty = diff;
+            const map = {
+                EASY: [1.15, 1.35, 1.65, 2.05, 2.60, 3.40, 4.50],
+                MEDIUM: [1.28, 1.70, 2.35, 3.30, 4.80, 7.20, 11.50],
+                HARD: [1.50, 2.40, 4.00, 7.00, 12.50, 22.00, 40.00]
+            };
+            chickenMultipliers = map[diff];
+            ['EASY', 'MEDIUM', 'HARD'].forEach(d => {
+                document.getElementById(`diff_${d}`).className = d === diff
+                    ? 'py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950'
+                    : 'py-1.5 rounded-lg text-xs font-bold text-slate-400';
+            });
+            renderChickenLanes(-1, []);
+        }
+
+        function renderChickenLanes(activeStep, road = []) {
+            const container = document.getElementById('chickenRoadLanes');
+            container.innerHTML = chickenMultipliers.map((m, idx) => {
+                let style = 'bg-slate-950 border-slate-800 text-slate-400';
+                let icon = '🛣️';
+
+                if (road.length > 0) {
+                    if (road[idx] === 'FIRE') {
+                        style = 'bg-rose-950/90 border-rose-500 text-rose-300';
+                        icon = '🔥';
+                    } else {
+                        style = 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300';
+                        icon = '🐔';
+                    }
+                } else if (idx <= activeStep) {
+                    style = 'bg-emerald-600 border-emerald-300 text-white shadow-lg';
+                    icon = '🐔';
+                }
+
+                return `<div class="border rounded-xl py-3 px-1 flex flex-col items-center justify-center ${style}">
+                    <span class="text-lg">${icon}</span>
+                    <span class="text-[10px] font-extrabold mt-1">${m}x</span>
+                </div>`;
+            }).join('');
+        }
+
+        async function startChickenGame() {
+            const amount = document.getElementById('chickenBetInput').value;
+            const res = await fetch('/api/chicken/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId, amount, difficulty: chickenDifficulty })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            chickenMultipliers = res.multipliers;
+            updateWalletUI(res.balance);
+            document.getElementById('chickenMultiplierDisplay').innerText = '1.00x';
+            document.getElementById('cashoutAmtText').innerText = '';
+            renderChickenLanes(-1, []);
+
+            document.getElementById('btnChickenStart').classList.add('hidden');
+            document.getElementById('chickenActiveControls').classList.remove('hidden');
+        }
+
+        async function stepChickenGame() {
+            const res = await fetch('/api/chicken/step', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            if (res.status === 'CRASHED') {
+                renderChickenLanes(res.step, res.road);
+                notify('🔥 Oh no! Chicken hit fire trap!');
+                document.getElementById('btnChickenStart').classList.remove('hidden');
+                document.getElementById('chickenActiveControls').classList.add('hidden');
+            } else if (res.status === 'MAX_WIN') {
+                renderChickenLanes(res.step, res.road);
+                updateWalletUI(res.balance);
+                notify(`🏆 ROAD CLEARED! Won ₹${res.winAmount}!`);
+                document.getElementById('btnChickenStart').classList.remove('hidden');
+                document.getElementById('chickenActiveControls').classList.add('hidden');
+            } else {
+                renderChickenLanes(res.step, []);
+                document.getElementById('chickenMultiplierDisplay').innerText = `${res.multiplier}x`;
+                document.getElementById('cashoutAmtText').innerText = `(₹${res.potentialWin})`;
+            }
+        }
+
+        async function cashoutChickenGame() {
+            const res = await fetch('/api/chicken/cashout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            updateWalletUI(res.balance);
+            renderChickenLanes(-1, res.road);
+            notify(`💰 Cashed Out ₹${res.winAmount}!`);
+            document.getElementById('btnChickenStart').classList.remove('hidden');
+            document.getElementById('chickenActiveControls').classList.add('hidden');
+        }
+
+        // ================= ROYAL DICE LOGIC =================
+        async function playDice(choice) {
+            const amount = document.getElementById('diceBetAmount').value;
+            const res = await fetch('/api/dice/play', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUserId, choice, amount })
+            }).then(r => r.json());
+
+            if (res.error) return notify('⚠️ ' + res.error);
+
+            const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+            document.getElementById('diceBox').innerText = faces[res.diceRoll - 1] || '🎲';
+            updateWalletUI(res.balance);
+
+            if (res.won) {
+                notify(`🎉 Rolled ${res.diceRoll}! You won ₹${res.winAmount}!`);
+            } else {
+                notify(`🎲 Rolled ${res.diceRoll}! Try again.`);
+            }
+        }
+
+        bootstrap();
+    </script>
+</body>
+</html>
